@@ -1,0 +1,67 @@
+/*Add New Page in wordpress and import csv file */
+
+add_action( 'admin_menu', 'my_admin_menu' );
+
+function my_admin_menu() {
+	add_menu_page( 'CSV Upload', 'Upload CSV', 'manage_options', 'csv_upload.php', 'csv_upload_fun', 'dashicons-tickets', 6  );
+}
+
+function csv_upload_fun(){
+	?>
+	<div class="wrap">
+		<h2>Upload Your CSV</h2>
+		<div class="csv_upload">
+		<form  method="post" enctype="multipart/form-data" id="importFrm">
+                <input type="file" name="file" />
+                <input type="submit" class="btn btn-primary" name="importSubmit" value="IMPORT">
+            </form>
+		</div>
+	</div>
+	<?php
+}
+
+if(isset($_POST['importSubmit'])){
+    
+    //validate whether uploaded file is a csv file
+    $csvMimes = array('text/x-comma-separated-values', 'text/comma-separated-values', 'application/octet-stream', 'application/vnd.ms-excel', 'application/x-csv', 'text/x-csv', 'text/csv', 'application/csv', 'application/excel', 'application/vnd.msexcel', 'text/plain');
+    if(!empty($_FILES['file']['name']) && in_array($_FILES['file']['type'],$csvMimes)){
+        if(is_uploaded_file($_FILES['file']['tmp_name'])){
+            
+            //open uploaded csv file with read only mode
+            $csvFile = fopen($_FILES['file']['tmp_name'], 'r');
+            
+            //skip first line
+            fgetcsv($csvFile);
+            global $wpdb;
+		
+            //parse data from csv file line by line
+            while(($line = fgetcsv($csvFile)) !== FALSE){
+				$name=$line[0];
+				print_r($name);
+                //check whether member already exists in database with same email
+                $prevQuery = "SELECT * FROM wp_users WHERE user_login = '$name'";
+                $prevResult =  $wpdb->get_row($prevQuery);
+				//print_r($prevResult);
+                if($prevResult){
+					
+                    //update member data
+					
+					$wpdb->update( 'wp_users', array( 'user_login' => $line[0],'user_url'=> $line[1] ), array( 'user_login)' => $name ));
+                }else{
+                    
+				  
+				  $wpdb->insert( 'wp_users', array( 'user_login' => $line[0] ));
+                }
+            
+            }
+            //close opened csv file
+            fclose($csvFile);
+
+            $qstring = '?status=succ';
+        }else{
+            $qstring = '?status=err';
+        }
+    }else{
+        $qstring = '?status=invalid_file';
+    }
+}
