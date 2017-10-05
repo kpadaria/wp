@@ -1,0 +1,4 @@
+body.page-two-column:not(.archive) #primary .entry-content{
+  float: none !important;
+  width:100% !important;
+}
